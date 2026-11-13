@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>청약레이더 — 청약·로또청약·청년·임대주택 공고 모음</title>
+<meta name="description" content="청약홈·LH·SH·서울 청년안심주택 공고를 한 곳에. 로또청약 판별, 무순위 줍줍, 청년·공공·장기·민간임대 일정 캘린더.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%233366ff'/%3E%3Cpath d='M16 7l8 7v10h-5v-6h-6v6H8V14z' fill='white'/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-in">
+    <a class="logo" href="/"><span class="logo-mark" aria-hidden="true"></span>청약레이더</a>
+    <div class="top-meta">
+      <span id="updated" class="muted"></span>
+      <button id="refreshBtn" class="icon-btn" title="지금 새로 수집" aria-label="새로고침">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+      </button>
+      <button id="settingsBtn" class="icon-btn" title="로또 판별 설정" aria-label="설정">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19.14 12.94a7.4 7.4 0 0 0 0-1.88l2.03-1.58-1.92-3.32-2.39.96a7.03 7.03 0 0 0-1.63-.94L14.87 3.6h-3.84l-.36 2.58c-.59.24-1.13.56-1.63.94l-2.39-.96-1.92 3.32 2.03 1.58a7.4 7.4 0 0 0 0 1.88l-2.03 1.58 1.92 3.32 2.39-.96c.5.38 1.04.7 1.63.94l.36 2.58h3.84l.36-2.58c.59-.24 1.13-.56 1.63-.94l2.39.96 1.92-3.32-2.03-1.58zM12.95 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <h1>흩어진 청약·임대 공고, <em>한 곳에서</em></h1>
+    <p class="muted">청약홈 · LH 청약플러스 · SH · 서울 청년안심주택을 3시간마다 모아 마감 임박순으로 정리합니다.</p>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+
+  <section class="controls">
+    <div class="ctrl-row">
+      <div class="seg" id="statusSeg" role="radiogroup" aria-label="진행 상태">
+        <button data-v="active" class="on">진행·예정</button>
+        <button data-v="open">접수중</button>
+        <button data-v="all">전체</button>
+      </div>
+      <select id="regionSel" aria-label="지역"></select>
+      <select id="kindSel" aria-label="유형"></select>
+      <select id="sortSel" aria-label="정렬">
+        <option value="deadline">마감 임박순</option>
+        <option value="recent">최신 공고순</option>
+        <option value="gain">예상 차익순</option>
+      </select>
+    </div>
+    <div class="ctrl-row">
+      <label class="search"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input id="q" type="search" placeholder="단지명·지역·시행사 검색"></label>
+      <div class="seg view-seg" id="viewSeg" role="radiogroup" aria-label="보기">
+        <button data-v="list" class="on">목록</button>
+        <button data-v="cal">캘린더</button>
+      </div>
+    </div>
+  </section>
+
+  <p id="resultInfo" class="muted result-info"></p>
+  <section id="list" class="list"></section>
+  <section id="cal" class="cal" hidden></section>
+
+  <footer class="foot muted">
+    <p>출처: 청약홈(한국부동산원) · LH 청약플러스 · SH 서울주택도시개발공사 · 서울시 청년안심주택. 실거래가: 국토교통부(공공데이터포털).</p>
+    <p>자동 수집 정보라 실제 공고와 다를 수 있어요. 신청 전 반드시 원문 공고문을 확인하세요. 로또 판별은 같은 시군구 최근 실거래 중앙값으로 추정한 참고치입니다.</p>
+    <p id="sourceStatus"></p>
+  </footer>
+</main>
+
+<aside id="drawer" class="drawer" hidden aria-modal="true" role="dialog">
+  <div class="drawer-bg" data-close></div>
+  <div class="drawer-panel">
+    <button class="drawer-x icon-btn" data-close aria-label="닫기">✕</button>
+    <div id="drawerBody"></div>
+  </div>
+</aside>
+
+<dialog id="settings" class="settings">
+  <form method="dialog" class="settings-in">
+    <h2>로또청약 판별 설정</h2>
+    <p class="muted">분양가를 주변 실거래가와 비교하려면 공공데이터포털 무료 인증키가 필요해요. 키가 없어도 공고 모음·분양가·평당가는 그대로 볼 수 있어요.</p>
+    <ol class="steps">
+      <li><a href="https://www.data.go.kr" target="_blank" rel="noopener">data.go.kr</a> 회원가입·로그인</li>
+      <li><b>국토교통부_아파트 매매 실거래가 자료</b> 검색 → 활용신청 (자동승인)</li>
+      <li><b>행정안전부_법정동코드</b> 검색 → 활용신청 (자동승인)</li>
+      <li>마이페이지 → 인증키 발급현황 → <b>일반 인증키(Decoding)</b> 복사</li>
+    </ol>
+    <div id="keyState" class="key-state"></div>
+    <div class="key-row">
+      <input id="keyInput" type="password" placeholder="인증키 붙여넣기" autocomplete="off">
+      <button type="button" id="keySave" class="btn primary">저장·확인</button>
+    </div>
+    <p id="keyMsg" class="key-msg"></p>
+    <div class="settings-foot"><button class="btn" value="close">닫기</button></div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" hidden></div>
+<script src="/app.js" type="module"></script>
+</body>
+</html>
