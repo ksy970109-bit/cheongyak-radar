@@ -45,6 +45,10 @@ lib/lotto.js         예상 시세·차익 계산
 public/              화면 (목록·캘린더·상세 패널)
 ```
 
+## 클라우드 배포
+
+[DEPLOY_ORACLE.md](DEPLOY_ORACLE.md) — Oracle Cloud 국내 리전 무료 VM에 `deploy/oracle-init.sh` 한 번 붙여넣기로 배포 (Node + Caddy HTTPS + 30분 자동 업데이트).
+
 ## 공개 배포 시 참고
 
 - 데이터 디렉터리는 `DATA_DIR`로 바꿀 수 있습니다. 무료 호스팅처럼 디스크가 휘발성이면 기동 때마다 1분가량 재수집합니다.

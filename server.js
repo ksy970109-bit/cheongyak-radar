@@ -11,6 +11,7 @@ import { REGION_NAMES, todayKST, daysBetween } from "./lib/util.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.DATA_DIR || path.join(__dirname, "data");
 const PORT = Number(process.env.PORT || 4320);
+const HOST = process.env.HOST || undefined; // set 127.0.0.1 on a server behind a proxy
 const REFRESH_HOURS = Number(process.env.REFRESH_HOURS || 3);
 fs.mkdirSync(DATA, { recursive: true });
 
@@ -34,7 +35,10 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html"] }));
 
-const isLocal = (req) => ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress);
+// Behind a reverse proxy (Caddy on the server) every request arrives from loopback,
+// so a forwarded request is never "local" — only direct visits on the machine itself.
+const isLocal = (req) =>
+  ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress) && !req.headers["x-forwarded-for"];
 
 app.get("/healthz", (req, res) => res.json({ ok: true }));
 
@@ -102,9 +106,11 @@ app.delete("/api/key", (req, res) => {
   res.json({ ok: true });
 });
 
-app.listen(PORT, () => {
-  log(`청약 레이더: http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  log(`청약 레이더: http://${HOST || "localhost"}:${PORT}`);
   const age = collector.state.updatedAt ? Date.now() - Date.parse(collector.state.updatedAt) : Infinity;
   if (age > 60 * 60e3) setTimeout(() => collector.run().catch((e) => log("[boot]", e)), 1500);
+  // key added since the last run (e.g. via env on a server) → compute 로또 판별 now, not in 3 hours
+  else if (molit.hasKey() && !collector.state.sources?.lotto) collector.run({ lottoOnly: true }).catch((e) => log("[boot]", e));
   setInterval(() => collector.run().catch((e) => log("[cron]", e)), REFRESH_HOURS * 3600e3);
 });
