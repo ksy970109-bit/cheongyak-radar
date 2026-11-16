@@ -26,7 +26,8 @@ const F = Object.assign(
 );
 F.q = "";
 
-const SRC = { applyhome: "청약홈", lh: "LH", sh: "SH", youth: "청년안심주택" };
+const SRC = { applyhome: "청약홈", lh: "LH", sh: "SH", youth: "청년안심주택", elyes: "엘리스(롯데)", myhome: "마이홈" };
+const srcName = (n) => n.sourceName || SRC[n.source] || n.source;
 const CAT_LABEL = {};
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -71,8 +72,9 @@ function schedLine(n) {
     s.push(`게시<b>${md(n.noticeDate)}</b>`);
     if (n.applyEnd) s.push(`마감<b>${md(n.applyEnd)}</b>`);
   } else if (n.source === "youth") {
-    s.push(`공고<b>${md(n.noticeDate)}</b>`);
-    if (n.applyStart) s.push(`청약신청<b>${md(n.applyStart)}</b>`);
+    if (n.applyStart) s.push(`청약신청<b>${range(n.applyStart, n.applyEnd)}</b>`);
+    else s.push(`공고<b>${md(n.noticeDate)}</b>`);
+    if (n.winnerDate) s.push(`발표<b>${md(n.winnerDate)}</b>`);
   } else if (n.source === "sh") {
     s.push(`공고<b>${md(n.noticeDate)}</b>`);
   } else {
@@ -120,7 +122,7 @@ function card(n) {
     <div class="sub">${esc(sub.join(" · "))}</div>
     <div class="sched">${schedLine(n)}</div>
     ${priceLine(n)}
-    <div class="tags"><span class="tag">${SRC[n.source]}</span>${tagsHtml(n)}</div>
+    <div class="tags"><span class="tag">${srcName(n)}</span>${tagsHtml(n)}</div>
   </article>`;
 }
 
@@ -297,6 +299,28 @@ function render() {
 }
 
 // ---------- drawer ----------
+// 마이홈 금액은 원 단위 → 사이트 다른 곳처럼 만원으로
+const manwon = (v) => (v == null ? "-" : v >= 10000 ? `${(v / 10000).toLocaleString(undefined, { maximumFractionDigits: 1 })}만` : v.toLocaleString());
+function complexTable(n) {
+  const cs = n.detail?.complexes || [];
+  if (n.source !== "myhome" || !cs.length) return "";
+  const total = n.detail.complexCount || cs.length;
+  const money = cs.some((c) => c.deposit != null || c.rent != null);
+  const price = cs.some((c) => c.price != null);
+  const rows = cs
+    .map(
+      (c) =>
+        `<tr><td>${esc(c.name || "-")}</td><td>${esc(c.address || "-")}</td><td>${c.supply ?? "-"}</td>${
+          money ? `<td>${manwon(c.deposit)}</td><td>${manwon(c.rent)}</td>` : ""
+        }${price ? `<td>${c.price ? won(Math.round(c.price / 10000)) : "-"}</td>` : ""}</tr>`
+    )
+    .join("");
+  return `<div class="d-sec"><h3>단지 ${total.toLocaleString()}곳</h3><div class="tbl-wrap"><table class="t"><thead><tr><th>단지</th><th>주소</th><th>공급</th>${
+    money ? "<th>최소 보증금</th><th>최소 월임대료</th>" : ""
+  }${price ? "<th>최소 분양가</th>" : ""}</tr></thead><tbody>${rows}</tbody></table></div>${
+    total > cs.length ? `<p class="note">외 ${total - cs.length}곳은 원문 공고에서 확인하세요.</p>` : ""
+  }<p class="note">마이홈포털(국토교통부) 제공 정보예요. 금액은 단지별 최소 조건이라 주택형마다 달라요.</p></div>`;
+}
 function openDrawer(id, push = true) {
   const n = DATA.notices.find((x) => x.id === id);
   if (!n) return;
@@ -313,7 +337,7 @@ function openDrawer(id, push = true) {
   kv("문의", n.tel ? `<a href="tel:${esc(n.tel)}">${esc(n.tel)}</a>` : "");
   kv("입주예정", d.moveIn ? esc(d.moveIn.replace("-", "년 ") + "월") : "");
   kv("특이사항", esc(d.remarks));
-  kv("출처", `${SRC[n.source]}${n.statusText ? " · " + esc(n.statusText) : ""}`);
+  kv("출처", `${srcName(n)}${n.statusText ? " · " + esc(n.statusText) : ""}`);
 
   const sched = [];
   const sr = (k, v) => v && sched.push(`<dt>${k}</dt><dd>${v}</dd>`);
@@ -323,7 +347,7 @@ function openDrawer(id, push = true) {
   if (s.rank2?.length) sr("2순위", s.rank2.length > 1 && s.rank2[0] !== s.rank2[1] ? `${md(s.rank2[0])} 해당 · ${md(s.rank2[1])} 기타` : md(s.rank2[0]));
   if (!s.special && !s.rank1) {
     if (n.source === "lh") sr("접수마감", md(n.applyEnd));
-    else if (n.source === "youth") sr("청약신청", md(n.applyStart));
+    else if (n.source === "youth") sr("청약신청", range(n.applyStart, n.applyEnd));
     else sr("청약접수", range(n.applyStart, n.applyEnd));
   }
   sr("당첨발표", md(s.winner || n.winnerDate));
@@ -364,6 +388,7 @@ function openDrawer(id, push = true) {
   const links = [`<a class="btn primary" href="${esc(n.url)}" target="_blank" rel="noopener">원문 공고 보기 ↗</a>`];
   if (d.pdfUrl) links.push(`<a class="btn" href="${esc(d.pdfUrl)}" target="_blank" rel="noopener">모집공고문 PDF</a>`);
   if (d.homepage) links.push(`<a class="btn" href="${esc(d.homepage)}" target="_blank" rel="noopener">분양 홈페이지</a>`);
+  if (d.myhomeUrl && d.myhomeUrl !== n.url) links.push(`<a class="btn" href="${esc(d.myhomeUrl)}" target="_blank" rel="noopener">마이홈포털에서 보기</a>`);
 
   $("#drawerBody").innerHTML = `
     <div class="card-top"><span class="pill ${cat}">${esc(CAT_LABEL[cat] || cat)}</span>${
@@ -377,6 +402,7 @@ function openDrawer(id, push = true) {
     n.source === "lh" ? '<p class="note">LH는 상세 일정이 공고문에 있어요. 원문 링크는 LH 청약플러스 공고 목록(공고명 검색)으로 연결됩니다.</p>' : ""
   }</div>
     ${unitTable ? `<div class="d-sec"><h3>주택형·분양가</h3>${unitTable}</div>` : ""}
+    ${complexTable(n)}
     <div class="d-sec"><h3>기본 정보</h3><dl class="kv">${rows.join("")}</dl></div>`;
   $("#drawer").hidden = false;
   document.body.style.overflow = "hidden";
@@ -394,6 +420,16 @@ function renderKeyState() {
   $("#keyState").innerHTML = DATA.hasKey
     ? `✅ 인증키 설정됨 — ${lotto ? (lotto.ok ? `로또 판별 ${lotto.count}건 계산` : `오류: ${esc(lotto.error)}`) : "다음 수집 때 계산합니다"}`
     : "인증키 없음 — 분양가·평당가까지만 표시 중";
+  const mh = DATA.sources?.myhome;
+  if (DATA.hasKey) {
+    $("#keyState").innerHTML += !mh
+      ? "<br>마이홈 모집공고 API — 다음 수집 때 확인합니다"
+      : mh.ok
+      ? `<br>✅ 마이홈 공공주택 공고 ${mh.count}건 수집`
+      : mh.pending
+      ? "<br>⏳ 마이홈 모집공고 API 승인 대기 — 활용신청 후 1~2시간 뒤, 다음 수집 때 자동 반영돼요"
+      : `<br>⚠️ 마이홈 API 오류: ${esc(mh.error)}`;
+  }
   const can = DATA.canEditKey;
   $("#keyInput").disabled = !can;
   $("#keySave").disabled = !can;
@@ -431,7 +467,7 @@ async function load() {
   const t = DATA.updatedAt ? new Date(DATA.updatedAt) : null;
   $("#updated").textContent = DATA.running ? "수집 중…" : t ? `${t.getMonth() + 1}/${t.getDate()} ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")} 업데이트` : "";
   $("#refreshBtn").classList.toggle("spin", DATA.running);
-  const bad = Object.values(DATA.sources || {}).filter((s) => !s.ok);
+  const bad = Object.values(DATA.sources || {}).filter((s) => !s.ok && !s.pending); // pending = API 승인 대기
   $("#sourceStatus").textContent = bad.length ? `수집 오류: ${bad.map((s) => s.label).join(", ")} (이전 데이터 유지)` : "";
   renderStats();
   render();
